@@ -21,13 +21,13 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-require 'valium'
-
 module RecurseDelete
   extend ActiveSupport::Concern
 
   def recurse_delete
-    delete_recursively self.class, self.id
+    ActiveRecord::Base.transaction do
+      delete_recursively self.class, self.id
+    end
   end
 
   def delete_recursively(parent_class, parent_ids)
@@ -41,13 +41,27 @@ module RecurseDelete
     assocs.each do |assoc|
       # get the dependent class
       dependent_class = assoc.name.to_s.classify.constantize
-      # get the foreign key
-      foreign_key = (assoc.options[:foreign_key] or parent_class.to_s.foreign_key)
-      # get all the dependent record ids 
-      dependent_ids = dependent_class.where(foreign_key => parent_ids).value_of(:id)
+
+      # get the foreign class; table_name is used to support STI
+      foreign_class = parent_class.table_name.classify
+      if polymorphic_association?(assoc)
+        # get the foreign key
+        foreign_key = assoc.options[:as].to_s.foreign_key
+        # get the foreign type
+        foreign_type = foreign_key.gsub('_id', '_type')
+        # get all the dependent record ids 
+        dependent_ids = dependent_class.where(foreign_key => parent_ids, foreign_type => foreign_class).pluck(:id)
+      else
+        foreign_key = assoc.options[:foreign_key].present? ? assoc.options[:foreign_key] : foreign_class.foreign_key
+        dependent_ids = dependent_class.where(foreign_key => parent_ids).pluck(:id)
+      end
       # recurse
       delete_recursively(dependent_class, dependent_ids)
     end
+  end
+
+  def polymorphic_association?(assoc)
+    assoc.options[:as].present?
   end
 
   module ClassMethods
