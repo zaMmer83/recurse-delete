@@ -9,6 +9,6 @@ Gem::Specification.new do |s|
   s.files       = ["lib/recurse-delete.rb"]
   s.homepage    = 'https://github.com/jisaacks/recurse-delete'
 
-  s.add_dependency('activerecord', '>= 4.0.0')
-  s.add_dependency('activesupport', '>= 4.0.0')
+  s.add_dependency('activerecord', '>= 3.2')
+  s.add_dependency('activesupport', '>= 3.2')
 end
