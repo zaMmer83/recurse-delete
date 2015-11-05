@@ -47,11 +47,13 @@ module RecurseDelete
         if polymorphic_association?(assoc)
           dependent_assoc = dependent_class.reflections[assoc.options[:as]]
           if dependent_assoc
-            condition[dependent_assoc.foreign_key]  = parent_ids
+            dependent_key = assoc.macro == :belongs_to ? dependent_class.primary_key : dependent_assoc.foreign_key
+            condition[dependent_key] = parent_ids
             condition[dependent_assoc.foreign_type] = parent_class.to_s
           end
         else
-          condition[assoc.foreign_key] = parent_ids
+          key = assoc.macro == :belongs_to ? dependent_class.primary_key : assoc.foreign_key
+          condition[key] = parent_ids
         end
         unless condition.empty?
           dependent_ids = dependent_class.where(condition).pluck(:id)
